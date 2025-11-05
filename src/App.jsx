@@ -4,6 +4,7 @@ import Header from './components/Header';
 import TabNavigation from './components/TabNavigation';
 import LinkGenerator from './components/LinkGenerator';
 import GoogleReviewGenerator from './components/GoogleReviewGenerator';
+import WiFiGenerator from './components/WiFiGenerator';
 import QRCodeDisplay from './components/QRCodeDisplay';
 import History from './components/History';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -27,6 +28,8 @@ function App() {
     bgColor: '#FFFFFF',
     errorCorrectionLevel: 'M',
     margin: 4,
+    logoDataUrl: null,
+    logoSize: 20,
   });
 
   // Debounce timer for real-time preview
@@ -52,7 +55,7 @@ function App() {
         if (timer) clearTimeout(timer);
       };
     }
-  }, [qrOptions.size, qrOptions.fgColor, qrOptions.bgColor, qrOptions.errorCorrectionLevel, qrOptions.margin]);
+  }, [qrOptions.size, qrOptions.fgColor, qrOptions.bgColor, qrOptions.errorCorrectionLevel, qrOptions.margin, qrOptions.logoDataUrl, qrOptions.logoSize]);
 
   const handleRegenerateQR = async () => {
     if (!currentUrl) return;
@@ -68,12 +71,14 @@ function App() {
         },
         errorCorrectionLevel: qrOptions.errorCorrectionLevel,
         margin: qrOptions.margin,
+        logoDataUrl: qrOptions.logoDataUrl,
+        logoSize: qrOptions.logoSize,
       });
 
       const newQRData = {
         url: currentUrl,
         type: currentType,
-        name: currentName || (currentType === 'link' ? new URL(currentUrl).hostname : 'Google Review'),
+        name: currentName || (currentType === 'link' ? new URL(currentUrl).hostname : currentType === 'wifi' ? 'WiFi QR Code' : 'Google Review'),
         dataUrl: qrCode,
         options: { ...qrOptions },
         timestamp: new Date().toISOString(),
@@ -92,22 +97,32 @@ function App() {
     try {
       setIsGenerating(true);
       
+      // For WiFi QR codes, ensure high error correction if logo is present
+      const qrOptionsToUse = { ...qrOptions };
+      if (qrOptions.logoDataUrl) {
+        qrOptionsToUse.errorCorrectionLevel = 'H';
+      }
+      
       const qrCode = await generateQRCode(url, {
-        width: qrOptions.size,
+        width: qrOptionsToUse.size,
         color: {
-          dark: qrOptions.fgColor,
-          light: qrOptions.bgColor,
+          dark: qrOptionsToUse.fgColor,
+          light: qrOptionsToUse.bgColor,
         },
-        errorCorrectionLevel: qrOptions.errorCorrectionLevel,
-        margin: qrOptions.margin,
+        errorCorrectionLevel: qrOptionsToUse.errorCorrectionLevel,
+        margin: qrOptionsToUse.margin,
+        logoDataUrl: qrOptionsToUse.logoDataUrl,
+        logoSize: qrOptionsToUse.logoSize,
       });
 
       const newQRData = {
         url,
         type,
-        name: name || (type === 'link' ? new URL(url).hostname : 'Google Review'),
+        name: name || (type === 'link' ? 
+          (url.startsWith('http') ? new URL(url).hostname : url) : 
+          type === 'wifi' ? 'WiFi QR Code' : 'Google Review'),
         dataUrl: qrCode,
-        options: { ...qrOptions },
+        options: { ...qrOptionsToUse },
         timestamp: new Date().toISOString(),
       };
 
@@ -161,7 +176,7 @@ function App() {
     setShowCustomization(true);
     
     // Set active tab based on type
-    setActiveTab(item.type === 'review' ? 'review' : 'link');
+    setActiveTab(item.type === 'review' ? 'review' : item.type === 'wifi' ? 'wifi' : 'link');
     
     toast.success('QR Code regenerado!');
     
@@ -196,6 +211,8 @@ function App() {
       bgColor: '#FFFFFF',
       errorCorrectionLevel: 'M',
       margin: 4,
+      logoDataUrl: null,
+      logoSize: 20,
     };
     
     setQrOptions(prev => ({
@@ -203,7 +220,17 @@ function App() {
       [optionKey]: defaults[optionKey]
     }));
     
-    toast.success(`${optionKey === 'fgColor' ? 'Cor do QR' : optionKey === 'bgColor' ? 'Cor do fundo' : optionKey.charAt(0).toUpperCase() + optionKey.slice(1)} resetado!`);
+    const optionNames = {
+      fgColor: 'Cor do QR',
+      bgColor: 'Cor do fundo',
+      size: 'Tamanho',
+      margin: 'Margem',
+      errorCorrectionLevel: 'Nível de correção',
+      logoDataUrl: 'Logo',
+      logoSize: 'Tamanho do logo'
+    };
+    
+    toast.success(`${optionNames[optionKey] || optionKey} resetado!`);
   };
 
   const resetAllOptions = () => {
@@ -213,6 +240,8 @@ function App() {
       bgColor: '#FFFFFF',
       errorCorrectionLevel: 'M',
       margin: 4,
+      logoDataUrl: null,
+      logoSize: 20,
     });
     toast.success('Todas as opções resetadas!');
   };
@@ -267,8 +296,19 @@ function App() {
                   resetOption={resetOption}
                   resetAllOptions={resetAllOptions}
                 />
-              ) : (
+              ) : activeTab === 'review' ? (
                 <GoogleReviewGenerator 
+                  onGenerate={handleGenerateQR}
+                  isGenerating={isGenerating}
+                  qrOptions={qrOptions}
+                  setQrOptions={setQrOptions}
+                  showCustomization={showCustomization}
+                  hasQrCode={!!qrData}
+                  resetOption={resetOption}
+                  resetAllOptions={resetAllOptions}
+                />
+              ) : (
+                <WiFiGenerator 
                   onGenerate={handleGenerateQR}
                   isGenerating={isGenerating}
                   qrOptions={qrOptions}

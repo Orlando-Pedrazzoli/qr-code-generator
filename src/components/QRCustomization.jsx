@@ -1,13 +1,58 @@
-import React from 'react';
-import { Palette, Maximize2, Shield, Square, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Palette, Maximize2, Shield, Square, RotateCcw, AlertTriangle, CheckCircle, ImagePlus, X } from 'lucide-react';
 import clsx from 'clsx';
+import { fileToDataUrl, resizeImage } from '../utils/qrGenerator';
+import toast from 'react-hot-toast';
 
 const QRCustomization = ({ options, setOptions, resetOption, resetAllOptions }) => {
+  const fileInputRef = useRef(null);
+
   const handleChange = (key, value) => {
     setOptions(prev => ({
       ...prev,
       [key]: value
     }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione uma imagem');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande. Máximo: 5MB');
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const resizedDataUrl = await resizeImage(dataUrl, 200);
+      
+      handleChange('logoDataUrl', resizedDataUrl);
+      toast.success('Logo adicionado com sucesso!');
+    } catch (error) {
+      console.error('Error processing logo:', error);
+      toast.error('Erro ao processar logo');
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeLogo = () => {
+    handleChange('logoDataUrl', null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    toast.success('Logo removido');
   };
 
   // Calculate contrast ratio between two colors
@@ -108,6 +153,11 @@ const QRCustomization = ({ options, setOptions, resetOption, resetAllOptions }) 
             <p className={clsx('text-sm', contrastColors[contrastStatus].text)}>
               {contrastMessages[contrastStatus]}
             </p>
+            {options.logoDataUrl && (
+              <p className={clsx('text-xs mt-1', contrastColors[contrastStatus].text)}>
+                ⚠️ Logo reduz a área de leitura. Use correção de erro "Muito Alta".
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -121,6 +171,78 @@ const QRCustomization = ({ options, setOptions, resetOption, resetAllOptions }) 
           <RotateCcw className="w-4 h-4" />
           Resetar Tudo
         </button>
+      </div>
+
+      {/* Logo Upload Section */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <ImagePlus className="w-4 h-4" />
+            Logo Central (Opcional)
+          </label>
+          {options.logoDataUrl && (
+            <button
+              onClick={removeLogo}
+              className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+            >
+              <X className="w-3 h-3" />
+              Remover
+            </button>
+          )}
+        </div>
+        
+        {options.logoDataUrl ? (
+          <div className="flex items-center gap-4">
+            <img 
+              src={options.logoDataUrl} 
+              alt="Logo" 
+              className="w-16 h-16 object-contain border border-gray-200 rounded"
+            />
+            <div className="flex-1">
+              <p className="text-sm text-gray-600">Logo adicionado com sucesso!</p>
+              <p className="text-xs text-gray-500">O logo será centralizado no QR Code</p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+              id="logo-upload"
+            />
+            <label
+              htmlFor="logo-upload"
+              className="cursor-pointer flex flex-col items-center justify-center gap-2 py-4 hover:bg-gray-50 rounded transition-colors"
+            >
+              <ImagePlus className="w-8 h-8 text-gray-400" />
+              <span className="text-sm text-gray-600">Clique para adicionar logo</span>
+              <span className="text-xs text-gray-500">PNG, JPG, GIF (Máx. 5MB)</span>
+            </label>
+          </div>
+        )}
+        
+        {options.logoDataUrl && (
+          <div className="mt-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              Tamanho do Logo ({options.logoSize || 20}%)
+            </label>
+            <input
+              type="range"
+              min="10"
+              max="30"
+              value={options.logoSize || 20}
+              onChange={(e) => handleChange('logoSize', parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Pequeno (10%)</span>
+              <span>Grande (30%)</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -285,10 +407,12 @@ const QRCustomization = ({ options, setOptions, resetOption, resetAllOptions }) 
             <option value="L">Baixa (7% - Maior densidade de dados)</option>
             <option value="M">Média (15% - Recomendado)</option>
             <option value="Q">Alta (25% - Boa resistência a danos)</option>
-            <option value="H">Muito Alta (30% - Máxima resistência)</option>
+            <option value="H">Muito Alta (30% - Recomendado com logo)</option>
           </select>
           <p className="mt-1 text-xs text-gray-500">
-            Níveis mais altos permitem que o QR Code funcione mesmo com danos parciais
+            {options.logoDataUrl 
+              ? '⚠️ Com logo, use "Muito Alta" para garantir leitura'
+              : 'Níveis mais altos permitem que o QR Code funcione mesmo com danos parciais'}
           </p>
         </div>
       </div>

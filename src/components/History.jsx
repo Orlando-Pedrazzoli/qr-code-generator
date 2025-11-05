@@ -1,15 +1,15 @@
 import React from 'react';
-import { Clock, Link2, Star, RefreshCw, Copy, Trash2, History as HistoryIcon } from 'lucide-react';
+import { Clock, Link2, Star, RefreshCw, Copy, Trash2, History as HistoryIcon, Wifi } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 const History = ({ history, onRegenerate, onClear }) => {
-  const handleCopyURL = async (url) => {
+  const handleCopyURL = async (url, type) => {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('URL copiada!');
+      toast.success(type === 'wifi' ? 'Configuração WiFi copiada!' : 'URL copiada!');
     } catch (error) {
-      toast.error('Erro ao copiar URL');
+      toast.error('Erro ao copiar');
     }
   };
 
@@ -41,11 +41,48 @@ const History = ({ history, onRegenerate, onClear }) => {
   };
 
   const getIcon = (type) => {
-    return type === 'review' ? Star : Link2;
+    switch(type) {
+      case 'review':
+        return Star;
+      case 'wifi':
+        return Wifi;
+      default:
+        return Link2;
+    }
   };
 
   const getIconColor = (type) => {
-    return type === 'review' ? 'text-yellow-500' : 'text-primary-600';
+    switch(type) {
+      case 'review':
+        return 'text-yellow-500';
+      case 'wifi':
+        return 'text-green-500';
+      default:
+        return 'text-primary-600';
+    }
+  };
+
+  const getBackgroundColor = (type) => {
+    switch(type) {
+      case 'review':
+        return 'bg-yellow-100';
+      case 'wifi':
+        return 'bg-green-100';
+      default:
+        return 'bg-blue-100';
+    }
+  };
+
+  const formatWiFiInfo = (url) => {
+    // Parse WiFi string to show readable info
+    if (url.startsWith('WIFI:')) {
+      const ssidMatch = url.match(/S:([^;]+);/);
+      const typeMatch = url.match(/T:([^;]+);/);
+      const ssid = ssidMatch ? ssidMatch[1] : 'Unknown';
+      const type = typeMatch ? typeMatch[1] : 'WPA';
+      return `${ssid} (${type})`;
+    }
+    return url;
   };
 
   if (history.length === 0) {
@@ -75,6 +112,7 @@ const History = ({ history, onRegenerate, onClear }) => {
           {history.map((item) => {
             const Icon = getIcon(item.type);
             const iconColor = getIconColor(item.type);
+            const bgColor = getBackgroundColor(item.type);
             
             return (
               <div
@@ -84,7 +122,7 @@ const History = ({ history, onRegenerate, onClear }) => {
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className={clsx(
                     'w-12 h-12 rounded-lg flex items-center justify-center',
-                    item.type === 'review' ? 'bg-yellow-100' : 'bg-blue-100'
+                    bgColor
                   )}>
                     <Icon className={clsx('w-6 h-6', iconColor)} />
                   </div>
@@ -94,7 +132,7 @@ const History = ({ history, onRegenerate, onClear }) => {
                       {item.name}
                     </p>
                     <p className="text-sm text-gray-600 truncate">
-                      {item.url}
+                      {item.type === 'wifi' ? formatWiFiInfo(item.url) : item.url}
                     </p>
                     <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                       <Clock className="w-3 h-3" />
@@ -112,9 +150,9 @@ const History = ({ history, onRegenerate, onClear }) => {
                     <RefreshCw className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleCopyURL(item.url)}
+                    onClick={() => handleCopyURL(item.url, item.type)}
                     className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                    title="Copiar URL"
+                    title={item.type === 'wifi' ? 'Copiar configuração WiFi' : 'Copiar URL'}
                   >
                     <Copy className="w-4 h-4" />
                   </button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link2, Star } from 'lucide-react';
+import { Link2, Star, Wifi } from 'lucide-react';
 import clsx from 'clsx';
 
 const TabNavigation = ({ activeTab, setActiveTab }) => {
@@ -13,6 +13,11 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
       id: 'review',
       label: 'Gerar QR para Google Review',
       icon: Star,
+    },
+    {
+      id: 'wifi',
+      label: 'Gerar QR para WiFi',
+      icon: Wifi,
     },
   ];
 
@@ -35,7 +40,9 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
             >
               <Icon className="w-5 h-5" />
               <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.id === 'link' ? 'Link' : 'Review'}</span>
+              <span className="sm:hidden">
+                {tab.id === 'link' ? 'Link' : tab.id === 'review' ? 'Review' : 'WiFi'}
+              </span>
               {activeTab === tab.id && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
               )}
