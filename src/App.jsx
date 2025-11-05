@@ -344,11 +344,18 @@ function App() {
         </main>
 
         <footer className="mt-16 text-center text-gray-600 text-sm pb-8">
-          <p>
-            © 2024 QR Code Generator • Desenvolvido com{' '}
-            <span className="text-red-500">❤️</span> por Orlando Pedrazzoli
-          </p>
-        </footer>
+  <p>
+    © 2025 QR Code Generator • Desenvolvido por{' '}
+    <a 
+      href="https://www.orlandopedrazzoli.com/" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-primary-600 hover:text-primary-700 hover:underline font-medium transition-all"
+    >
+      Orlando Pedrazzoli
+    </a>
+  </p>
+</footer>
       </div>
     </div>
   );
