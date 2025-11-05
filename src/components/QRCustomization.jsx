@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, memo } from 'react';
 import { Palette, Maximize2, Shield, Square, RotateCcw, AlertTriangle, CheckCircle, ImagePlus, X } from 'lucide-react';
 import clsx from 'clsx';
 import { fileToDataUrl, resizeImage } from '../utils/qrGenerator';
@@ -489,4 +489,4 @@ const QRCustomization = ({ options, setOptions, resetOption, resetAllOptions }) 
   );
 };
 
-export default QRCustomization;
+export default memo(QRCustomization);

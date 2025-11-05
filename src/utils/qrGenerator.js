@@ -177,18 +177,24 @@ export const downloadQRCode = (dataUrl, format = 'png', fileName = 'qrcode') => 
  * @param {string} string - The string to validate
  * @returns {boolean} - Whether the string is a valid URL
  */
+// Linha 171 - substituir função isValidURL
 export const isValidURL = (string) => {
+  if (!string || typeof string !== 'string') return false;
+  
+  // Bloquear protocolos perigosos
+  const dangerousProtocols = ['javascript:', 'data:', 'file:', 'vbscript:'];
+  const lowerString = string.toLowerCase().trim();
+  
+  if (dangerousProtocols.some(p => lowerString.startsWith(p))) {
+    return false;
+  }
+  
   try {
-    new URL(string);
-    return true;
+    const url = new URL(string.startsWith('http') ? string : `https://${string}`);
+    // Validar que é http ou https
+    return url.protocol === 'http:' || url.protocol === 'https:';
   } catch {
-    // Try with https:// prefix
-    try {
-      new URL(`https://${string}`);
-      return true;
-    } catch {
-      return false;
-    }
+    return false;
   }
 };
 
