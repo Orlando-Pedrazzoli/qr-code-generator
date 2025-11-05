@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import TabNavigation from './components/TabNavigation';
@@ -15,6 +15,10 @@ function App() {
   const [qrData, setQrData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useLocalStorage('qr_history', []);
+  const [currentUrl, setCurrentUrl] = useState('');
+  const [currentType, setCurrentType] = useState('link');
+  const [currentName, setCurrentName] = useState('');
+  const [showCustomization, setShowCustomization] = useState(false);
   
   // QR Code customization options
   const [qrOptions, setQrOptions] = useState({
@@ -24,6 +28,65 @@ function App() {
     errorCorrectionLevel: 'M',
     margin: 4,
   });
+
+  // Debounce timer for real-time preview
+  const [debounceTimer, setDebounceTimer] = useState(null);
+
+  // Auto-regenerate QR Code when options change (with debounce)
+  useEffect(() => {
+    if (qrData && currentUrl) {
+      // Clear existing timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      // Set new timer
+      const timer = setTimeout(() => {
+        handleRegenerateQR();
+      }, 300); // 300ms debounce
+
+      setDebounceTimer(timer);
+
+      // Cleanup
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }
+  }, [qrOptions.size, qrOptions.fgColor, qrOptions.bgColor, qrOptions.errorCorrectionLevel, qrOptions.margin]);
+
+  const handleRegenerateQR = async () => {
+    if (!currentUrl) return;
+
+    try {
+      setIsGenerating(true);
+      
+      const qrCode = await generateQRCode(currentUrl, {
+        width: qrOptions.size,
+        color: {
+          dark: qrOptions.fgColor,
+          light: qrOptions.bgColor,
+        },
+        errorCorrectionLevel: qrOptions.errorCorrectionLevel,
+        margin: qrOptions.margin,
+      });
+
+      const newQRData = {
+        url: currentUrl,
+        type: currentType,
+        name: currentName || (currentType === 'link' ? new URL(currentUrl).hostname : 'Google Review'),
+        dataUrl: qrCode,
+        options: { ...qrOptions },
+        timestamp: new Date().toISOString(),
+      };
+
+      setQrData(newQRData);
+      
+    } catch (error) {
+      console.error('Error regenerating QR code:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleGenerateQR = async (url, type, name = '') => {
     try {
@@ -49,6 +112,10 @@ function App() {
       };
 
       setQrData(newQRData);
+      setCurrentUrl(url);
+      setCurrentType(type);
+      setCurrentName(name || newQRData.name);
+      setShowCustomization(true); // Show customization after first generation
       
       // Add to history
       const newHistory = [
@@ -80,6 +147,9 @@ function App() {
 
   const handleRegenerateFromHistory = (item) => {
     setQrOptions(item.options);
+    setCurrentUrl(item.url);
+    setCurrentType(item.type);
+    setCurrentName(item.name);
     setQrData({
       url: item.url,
       type: item.type,
@@ -88,11 +158,20 @@ function App() {
       options: item.options,
       timestamp: item.timestamp,
     });
+    setShowCustomization(true);
     
     // Set active tab based on type
     setActiveTab(item.type === 'review' ? 'review' : 'link');
     
     toast.success('QR Code regenerado!');
+    
+    // Scroll to QR display
+    setTimeout(() => {
+      document.getElementById('qr-display')?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+    }, 100);
   };
 
   const handleClearHistory = () => {
@@ -100,6 +179,42 @@ function App() {
       setHistory([]);
       toast.success('Histórico limpo com sucesso!');
     }
+  };
+
+  const handleResetQR = () => {
+    setQrData(null);
+    setCurrentUrl('');
+    setCurrentType('link');
+    setCurrentName('');
+    setShowCustomization(false);
+  };
+
+  const resetOption = (optionKey) => {
+    const defaults = {
+      size: 250,
+      fgColor: '#000000',
+      bgColor: '#FFFFFF',
+      errorCorrectionLevel: 'M',
+      margin: 4,
+    };
+    
+    setQrOptions(prev => ({
+      ...prev,
+      [optionKey]: defaults[optionKey]
+    }));
+    
+    toast.success(`${optionKey === 'fgColor' ? 'Cor do QR' : optionKey === 'bgColor' ? 'Cor do fundo' : optionKey.charAt(0).toUpperCase() + optionKey.slice(1)} resetado!`);
+  };
+
+  const resetAllOptions = () => {
+    setQrOptions({
+      size: 250,
+      fgColor: '#000000',
+      bgColor: '#FFFFFF',
+      errorCorrectionLevel: 'M',
+      margin: 4,
+    });
+    toast.success('Todas as opções resetadas!');
   };
 
   return (
@@ -147,6 +262,10 @@ function App() {
                   isGenerating={isGenerating}
                   qrOptions={qrOptions}
                   setQrOptions={setQrOptions}
+                  showCustomization={showCustomization}
+                  hasQrCode={!!qrData}
+                  resetOption={resetOption}
+                  resetAllOptions={resetAllOptions}
                 />
               ) : (
                 <GoogleReviewGenerator 
@@ -154,6 +273,10 @@ function App() {
                   isGenerating={isGenerating}
                   qrOptions={qrOptions}
                   setQrOptions={setQrOptions}
+                  showCustomization={showCustomization}
+                  hasQrCode={!!qrData}
+                  resetOption={resetOption}
+                  resetAllOptions={resetAllOptions}
                 />
               )}
             </div>
@@ -163,7 +286,8 @@ function App() {
             <div id="qr-display" className="mt-8">
               <QRCodeDisplay 
                 qrData={qrData}
-                onReset={() => setQrData(null)}
+                onReset={handleResetQR}
+                isUpdating={isGenerating}
               />
             </div>
           )}
@@ -182,7 +306,7 @@ function App() {
         <footer className="mt-16 text-center text-gray-600 text-sm pb-8">
           <p>
             © 2024 QR Code Generator • Desenvolvido com{' '}
-            <span className="text-red-500">❤️</span> para facilitar seu negócio
+            <span className="text-red-500">❤️</span> por Orlando Pedrazzoli
           </p>
         </footer>
       </div>

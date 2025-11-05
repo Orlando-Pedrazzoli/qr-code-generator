@@ -4,10 +4,19 @@ import QRCustomization from './QRCustomization';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
-const LinkGenerator = ({ onGenerate, isGenerating, qrOptions, setQrOptions }) => {
+const LinkGenerator = ({ 
+  onGenerate, 
+  isGenerating, 
+  qrOptions, 
+  setQrOptions, 
+  showCustomization,
+  hasQrCode,
+  resetOption,
+  resetAllOptions 
+}) => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
-  const [showCustomization, setShowCustomization] = useState(false);
+  const [showCustomizationToggle, setShowCustomizationToggle] = useState(false);
 
   const validateURL = (value) => {
     if (!value) {
@@ -95,34 +104,42 @@ const LinkGenerator = ({ onGenerate, isGenerating, qrOptions, setQrOptions }) =>
           )}
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <button
-            type="button"
-            onClick={() => setShowCustomization(!showCustomization)}
-            className="flex items-center justify-between w-full text-left"
-          >
-            <div className="flex items-center gap-2 text-blue-900 font-medium">
-              <Settings className="w-5 h-5" />
-              Personalização do QR Code
-            </div>
-            <svg
-              className={`w-5 h-5 text-blue-900 transition-transform ${
-                showCustomization ? 'rotate-180' : ''
-              }`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        {/* Show customization toggle only before first generation */}
+        {!hasQrCode && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <button
+              type="button"
+              onClick={() => setShowCustomizationToggle(!showCustomizationToggle)}
+              className="flex items-center justify-between w-full text-left"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          
-          {showCustomization && (
-            <div className="mt-4 pt-4 border-t border-blue-200">
-              <QRCustomization options={qrOptions} setOptions={setQrOptions} />
-            </div>
-          )}
-        </div>
+              <div className="flex items-center gap-2 text-blue-900 font-medium">
+                <Settings className="w-5 h-5" />
+                Personalização do QR Code
+              </div>
+              <svg
+                className={`w-5 h-5 text-blue-900 transition-transform ${
+                  showCustomizationToggle ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {showCustomizationToggle && (
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                <QRCustomization 
+                  options={qrOptions} 
+                  setOptions={setQrOptions}
+                  resetOption={resetOption}
+                  resetAllOptions={resetAllOptions}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           type="submit"
@@ -146,12 +163,34 @@ const LinkGenerator = ({ onGenerate, isGenerating, qrOptions, setQrOptions }) =>
         </button>
       </form>
 
+      {/* Customization always visible after generation */}
+      {hasQrCode && showCustomization && (
+        <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-primary-200 rounded-xl p-6 animate-slide-up">
+          <div className="flex items-center gap-2 mb-4">
+            <Settings className="w-6 h-6 text-primary-600" />
+            <h3 className="text-lg font-bold text-gray-900">
+              Personalização em Tempo Real
+            </h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            ✨ Ajuste as opções abaixo e veja as mudanças instantaneamente!
+          </p>
+          <QRCustomization 
+            options={qrOptions} 
+            setOptions={setQrOptions}
+            resetOption={resetOption}
+            resetAllOptions={resetAllOptions}
+          />
+        </div>
+      )}
+
       <div className="bg-gray-50 rounded-lg p-4">
         <h3 className="font-semibold text-gray-900 mb-2">💡 Dicas:</h3>
         <ul className="space-y-1 text-sm text-gray-600">
           <li>• Você pode inserir links com ou sem "https://"</li>
           <li>• Use links curtos para QR Codes mais simples</li>
           <li>• Teste sempre o QR Code antes de imprimir</li>
+          <li>• Personalize as cores após gerar o QR Code</li>
         </ul>
       </div>
     </div>

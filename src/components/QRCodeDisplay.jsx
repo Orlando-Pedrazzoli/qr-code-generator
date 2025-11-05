@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Download, Copy, RefreshCw, Check, FileText, Image } from 'lucide-react';
+import { Download, Copy, RefreshCw, Check, FileText, Image, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { downloadQRCode } from '../utils/qrGenerator';
 import clsx from 'clsx';
 
-const QRCodeDisplay = ({ qrData, onReset }) => {
+const QRCodeDisplay = ({ qrData, onReset, isUpdating }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopyURL = async () => {
@@ -117,12 +117,23 @@ const QRCodeDisplay = ({ qrData, onReset }) => {
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden animate-slide-up">
       <div className="bg-gradient-to-r from-primary-600 to-purple-600 text-white p-6">
-        <h2 className="text-2xl font-bold text-center">QR Code Gerado com Sucesso!</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">QR Code Gerado com Sucesso!</h2>
+          {isUpdating && (
+            <div className="flex items-center gap-2 text-sm bg-white/20 px-3 py-1 rounded-full">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Atualizando...</span>
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="p-8">
         <div className="text-center mb-6">
-          <div className="inline-block p-6 bg-white rounded-xl shadow-lg">
+          <div className={clsx(
+            "inline-block p-6 bg-white rounded-xl shadow-lg transition-opacity duration-300",
+            isUpdating && "opacity-50"
+          )}>
             <img 
               src={qrData.dataUrl} 
               alt="QR Code" 
@@ -130,6 +141,12 @@ const QRCodeDisplay = ({ qrData, onReset }) => {
               style={{ width: `${qrData.options.size}px`, height: `${qrData.options.size}px` }}
             />
           </div>
+          {isUpdating && (
+            <p className="mt-3 text-sm text-gray-500 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Regenerando com novas configurações...
+            </p>
+          )}
         </div>
 
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -155,7 +172,13 @@ const QRCodeDisplay = ({ qrData, onReset }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button
             onClick={handleDownloadPNG}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            disabled={isUpdating}
+            className={clsx(
+              "flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors",
+              isUpdating 
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-primary-600 text-white hover:bg-primary-700"
+            )}
           >
             <Image className="w-4 h-4" />
             <span className="text-sm font-medium">PNG</span>
@@ -163,7 +186,13 @@ const QRCodeDisplay = ({ qrData, onReset }) => {
 
           <button
             onClick={handleDownloadSVG}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            disabled={isUpdating}
+            className={clsx(
+              "flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors",
+              isUpdating 
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-purple-600 text-white hover:bg-purple-700"
+            )}
           >
             <FileText className="w-4 h-4" />
             <span className="text-sm font-medium">SVG</span>
@@ -171,8 +200,10 @@ const QRCodeDisplay = ({ qrData, onReset }) => {
 
           <button
             onClick={handleCopyURL}
+            disabled={isUpdating}
             className={clsx(
               'flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all',
+              isUpdating && 'cursor-not-allowed opacity-50',
               copied 
                 ? 'bg-green-600 text-white' 
                 : 'bg-gray-600 text-white hover:bg-gray-700'
@@ -202,7 +233,13 @@ const QRCodeDisplay = ({ qrData, onReset }) => {
 
         <button
           onClick={handlePrint}
-          className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          disabled={isUpdating}
+          className={clsx(
+            "w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors",
+            isUpdating 
+              ? "border-2 border-gray-200 text-gray-400 cursor-not-allowed"
+              : "border-2 border-gray-200 text-gray-700 hover:bg-gray-50"
+          )}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
